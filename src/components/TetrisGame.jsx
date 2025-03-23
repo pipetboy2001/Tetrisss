@@ -589,7 +589,16 @@ const TetrisGame = () => {
         backgroundRepeat: "no-repeat",
       }}
     >
-      <NavBar toggleHelpModal={toggleHelpModal} />
+      <NavBar 
+      toggleHelpModal={toggleHelpModal} 
+      handleResetHighScore={handleResetHighScore}
+    />
+    {/* Añadir el modal de ayuda aquí */}
+    <HelpModal 
+      show={showHelpModal} 
+      onClose={toggleHelpModal} 
+    />
+
 
       <div className="container">
         <div className="row justify-content-center">
@@ -635,7 +644,7 @@ const TetrisGame = () => {
               handleStartButton={handleStartButton}
               gameOver={gameOver}
               paused={paused}
-              handleResetHighScore={handleResetHighScore}
+              
             />
             
             {/* Controles táctiles - solo visibles en móvil */}

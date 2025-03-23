@@ -12,17 +12,7 @@ const ControlButtons = ({ handleStartButton, gameOver, paused, handleResetHighSc
       </div>
     </div>
 
-    {/* Botón para reiniciar récord */}
-    <div className="row m-2">
-      <div className="col-12">
-        <button
-          onClick={handleResetHighScore}
-          className="btn btn-outline-warning w-100 py-1 fs-6 fs-md-5"
-        >
-          Reiniciar Récord
-        </button>
-      </div>
-    </div>
+    
   </>
 );
 
