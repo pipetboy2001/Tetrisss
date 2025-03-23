@@ -6,6 +6,7 @@ import {drawMatrix} from './../helpers/renderHelpers';
 import ScorePanel from './ScorePanel';
 import PiecePanels from './PiecePanels';
 import HelpModal from './HelpModal';
+import ControlButtons from './ControlButtons';
 
 const TetrisGame = () => {
 
@@ -631,30 +632,15 @@ const TetrisGame = () => {
                 />
               
             </div>
-
-            {/* Botón de iniciar/pausar/reanudar */}
-            <div className="row m-2">
-              <div className="col-12">
-                <button
-                  onClick={handleStartButton}
-                  className="btn btn-primary w-100 py-2 fs-6 fs-md-5"
-                >
-                  {gameOver ? "Iniciar Juego" : paused ? "Reanudar" : "Pausar"}
-                </button>
-              </div>
-            </div>
-
-            {/* Botón para reiniciar récord */}
-            <div className="row m-2">
-              <div className="col-12">
-                <button
-                  onClick={handleResetHighScore}
-                  className="btn btn-outline-warning w-100 py-1 fs-6 fs-md-5"
-                >
-                  Reiniciar Récord
-                </button>
-              </div>
-            </div>
+              
+            {/* Controles de juego */}
+            <ControlButtons
+              handleStartButton={handleStartButton}
+              gameOver={gameOver}
+              paused={paused}
+              handleResetHighScore={handleResetHighScore}
+            />
+            
 
             {/* Controles táctiles - solo visibles en móvil */}
             <div className="row d-md-none">
@@ -733,8 +719,7 @@ const TetrisGame = () => {
               </div>
               <HelpModal show={showHelpModal} onClose={toggleHelpModal} />
               </div>
-            
-          </div>
+            </div>
         </div>
       </div>
     </div>
