@@ -4,12 +4,14 @@ import {createMatrix, merge} from './../service/boardService';
 import {createPiece, collide, rotate} from './../service/pieceService';
 import {drawMatrix} from './../helpers/renderHelpers';
 import ScorePanel from './ScorePanel';
+import PiecePanels from './PiecePanels';
 
 
 const TetrisGame = () => {
 
   const tetrisRef = useRef(null);
   const nextPieceRef = useRef(null);
+  const holdPieceRef = useRef(null); // Referencia para el canvas de la pieza guardada
   const requestRef = useRef(null);
   const lastTimeRef = useRef(0);
   const dropCounterRef = useRef(0);
@@ -22,6 +24,7 @@ const TetrisGame = () => {
   const [paused, setPaused] = useState(false);
   const [dropInterval, setDropInterval] = useState(1000);
   const [newRecord, setNewRecord] = useState(false);
+  const [holdUsed, setHoldUsed] = useState(false); // Estado para controlar si ya se usó hold en esta pieza
 
   const [gameTime, setGameTime] = useState(0);
   const [gameTimeInterval, setGameTimeInterval] = useState(null);
@@ -36,7 +39,8 @@ const TetrisGame = () => {
   const [player, setPlayer] = useState({
     pos: { x: 0, y: 0 },
     matrix: null,
-    nextPiece: null
+    nextPiece: null,
+    holdPiece: null  // Añadido para guardar la pieza en hold
   });
   
   // Cargar récord del localStorage al inicio
@@ -81,9 +85,11 @@ const TetrisGame = () => {
     setDropInterval(1000);
     setNewRecord(false);
     setGameTime(0);
+    setHoldUsed(false); // Reiniciar el estado de hold al iniciar un nuevo juego
     setPlayer(prev => ({
       ...prev,
-      nextPiece
+      nextPiece,
+      holdPiece: null // Reiniciar la pieza guardada
     }));
     
     resetPlayer(newBoard, nextPiece);
@@ -101,7 +107,8 @@ const TetrisGame = () => {
         x: Math.floor(BOARD_WIDTH / 2) - Math.floor(matrix[0].length / 2)
       },
       matrix: matrix,
-      nextPiece: newNextPiece
+      nextPiece: newNextPiece,
+      holdPiece: player.holdPiece // Mantener la pieza guardada
     };
     
     setPlayer(newPlayer);
@@ -119,7 +126,13 @@ const TetrisGame = () => {
     }
     
     drawNextPiece(newNextPiece);
-  }, [collide, highScore, score]);
+    if (newPlayer.holdPiece) {
+      drawHoldPiece(newPlayer.holdPiece);
+    }
+    
+    // Restablecer el estado de hold con cada nueva pieza
+    setHoldUsed(false);
+  }, [collide, highScore, score, player.holdPiece]);
   
   // Limpiar filas completas
   const clearLines = useCallback(() => {
@@ -166,7 +179,80 @@ const TetrisGame = () => {
     }
   }, [board, level, score, lines, highScore]);
   
-
+  // Función para guardar pieza (hold)
+  const holdPiece = useCallback(() => {
+    // Si ya se usó hold para esta pieza, ignorar
+    if (holdUsed || gameOver || paused) return;
+    
+    const newPlayer = { ...player };
+    
+    if (newPlayer.holdPiece === null) {
+      // Si no hay pieza guardada, guardar la actual y obtener la siguiente
+      newPlayer.holdPiece = newPlayer.matrix;
+      newPlayer.matrix = newPlayer.nextPiece;
+      newPlayer.nextPiece = createPiece();
+      
+      // Reiniciar posición
+      newPlayer.pos = {
+        y: 0,
+        x: Math.floor(BOARD_WIDTH / 2) - Math.floor(newPlayer.matrix[0].length / 2)
+      };
+      
+      drawNextPiece(newPlayer.nextPiece);
+    } else {
+      // Si ya hay una pieza guardada, intercambiar
+      const temp = newPlayer.holdPiece;
+      newPlayer.holdPiece = newPlayer.matrix;
+      newPlayer.matrix = temp;
+      
+      // Reiniciar posición
+      newPlayer.pos = {
+        y: 0,
+        x: Math.floor(BOARD_WIDTH / 2) - Math.floor(newPlayer.matrix[0].length / 2)
+      };
+    }
+    
+    // Dibujar pieza guardada
+    drawHoldPiece(newPlayer.holdPiece);
+    
+    // Marcar que se ha usado hold para esta pieza
+    setHoldUsed(true);
+    
+    setPlayer(newPlayer);
+  }, [player, holdUsed, gameOver, paused]);
+  
+  // Dibujar la pieza guardada
+  const drawHoldPiece = useCallback((holdPiece) => {
+    if (!holdPieceRef.current) return;
+    
+    const holdPieceCtx = holdPieceRef.current.getContext('2d');
+    const canvas = holdPieceRef.current;
+    holdPieceCtx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    const xOffset = (canvas.width - holdPiece[0].length * BLOCK_SIZE) / 2;
+    const yOffset = (canvas.height - holdPiece.length * BLOCK_SIZE) / 2;
+    
+    holdPiece.forEach((row, y) => {
+      row.forEach((value, x) => {
+        if (value !== 0) {
+          holdPieceCtx.fillStyle = COLORS[value];
+          holdPieceCtx.fillRect(
+            xOffset + x * BLOCK_SIZE,
+            yOffset + y * BLOCK_SIZE,
+            BLOCK_SIZE,
+            BLOCK_SIZE
+          );
+          holdPieceCtx.strokeStyle = 'black';
+          holdPieceCtx.strokeRect(
+            xOffset + x * BLOCK_SIZE,
+            yOffset + y * BLOCK_SIZE,
+            BLOCK_SIZE,
+            BLOCK_SIZE
+          );
+        }
+      });
+    });
+  }, []);
   
   // Dibujar la siguiente pieza
   const drawNextPiece = useCallback((nextPiece) => {
@@ -248,7 +334,7 @@ const TetrisGame = () => {
       ctx.textAlign = 'center';
       ctx.fillText('PAUSA', tetrisRef.current.width / 2, tetrisRef.current.height / 2);
     }
-  }, [board, gameOver, paused, player, newRecord]);
+  }, [board, gameOver, paused, player, newRecord, score]);
   
   // Mover la pieza del jugador
   const playerMove = useCallback((dir) => {
@@ -259,8 +345,6 @@ const TetrisGame = () => {
       setPlayer(newPlayer);
     }
   }, [player, board]);
-  
-
   
   // Rotar la pieza del jugador
   const playerRotate = useCallback(() => {
@@ -408,6 +492,11 @@ const TetrisGame = () => {
           event.preventDefault();
           playerDropToBottom();
           break;
+        case 'c':
+        case 'C':
+          event.preventDefault();
+          holdPiece();
+          break;
         default:
           break;
       }
@@ -423,7 +512,7 @@ const TetrisGame = () => {
       window.removeEventListener('keydown', handleKeyDown);
       cancelAnimationFrame(requestRef.current);
     };
-  }, [handleResize, playerMove, playerDrop, playerRotate, playerDropToBottom, update, gameOver, paused]);
+  }, [handleResize, playerMove, playerDrop, playerRotate, playerDropToBottom, holdPiece, update, gameOver, paused]);
   
   // Iniciar juego
   useEffect(() => {
@@ -437,7 +526,8 @@ const TetrisGame = () => {
           x: Math.floor(BOARD_WIDTH / 2) - Math.floor(initialMatrix[0].length / 2)
         },
         matrix: initialMatrix,
-        nextPiece: nextPiece
+        nextPiece: nextPiece,
+        holdPiece: null
       });
       
       if (nextPieceRef.current) {
@@ -527,23 +617,11 @@ const TetrisGame = () => {
                 ></canvas>
               </div>
 
-              {/* Panel de siguiente pieza */}
-              <div className="col-5 d-flex">
-                <div className="card border-dark flex-fill">
-                  <div className="card-body p-2 p-md-3 text-center">
-                    <h5 className="fw-bold fs-6 fs-md-5">Siguiente</h5>
-                    <div className="d-flex justify-content-center align-items-center mt-2">
-                      <canvas
-                        ref={nextPieceRef}
-                        width={80}
-                        height={80}
-                        className="border border-dark"
-                        style={{ maxWidth: "100%", height: "auto" }}
-                      ></canvas>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                <PiecePanels
+                  holdPieceRef={holdPieceRef}
+                  nextPieceRef={nextPieceRef}
+                />
+              
             </div>
 
             {/* Botón de iniciar/pausar/reanudar */}
@@ -601,7 +679,7 @@ const TetrisGame = () => {
                     </button>
                   </div>
                 </div>
-                <div className="row g-2">
+                <div className="row g-2 mb-2">
                   <div className="col-8">
                     <button
                       {...setupButtonTouch(() => playerDrop())}
@@ -621,6 +699,17 @@ const TetrisGame = () => {
                     </button>
                   </div>
                 </div>
+                <div className="row g-2">
+                  <div className="col-12">
+                    <button
+                      {...setupButtonTouch(() => holdPiece())}
+                      className="btn btn-info w-100 py-3 fs-6"
+                      aria-label="Guardar pieza"
+                    >
+                      Hold
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -637,6 +726,9 @@ const TetrisGame = () => {
                       </p>
                       <p className="mb-1">
                         <span className="fw-bold">↑:</span> Rotar pieza
+                      </p>
+                      <p className="mb-1">
+                        <span className="fw-bold">C:</span> Guardar pieza (Hold)
                       </p>
                     </div>
                     <div className="col-6 text-md-start">
