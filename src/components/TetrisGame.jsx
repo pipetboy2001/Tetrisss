@@ -5,7 +5,7 @@ import {createPiece, collide, rotate} from './../service/pieceService';
 import {drawMatrix} from './../helpers/renderHelpers';
 import ScorePanel from './ScorePanel';
 import PiecePanels from './PiecePanels';
-
+import HelpModal from './HelpModal';
 
 const TetrisGame = () => {
 
@@ -26,6 +26,9 @@ const TetrisGame = () => {
   const [newRecord, setNewRecord] = useState(false);
   const [holdUsed, setHoldUsed] = useState(false); // Estado para controlar si ya se usó hold en esta pieza
 
+  // Añadir este estado para controlar la visibilidad del modal
+  const [showHelpModal, setShowHelpModal] = useState(false);
+
   const [gameTime, setGameTime] = useState(0);
   const [gameTimeInterval, setGameTimeInterval] = useState(null);
 
@@ -33,6 +36,11 @@ const TetrisGame = () => {
     width: window.innerWidth,
     height: window.innerHeight
   });
+
+  // Función para abrir/cerrar el modal
+  const toggleHelpModal = () => {
+    setShowHelpModal(!showHelpModal);
+  };
   
   // Estado del juego
   const [board, setBoard] = useState(() => createMatrix(BOARD_WIDTH, BOARD_HEIGHT));
@@ -713,37 +721,19 @@ const TetrisGame = () => {
               </div>
             </div>
 
-            {/* Keyboard instructions - visible only on desktop */}
-            <div className="col-12 d-none d-md-block mt-3">
-              <div className="card border-dark">
-                <div className="card-body p-3 text-center">
-                  <h5 className="fw-bold mb-2">Controles de teclado</h5>
-                  <div className="row mt-2">
-                    <div className="col-6 text-md-end">
-                      <p className="mb-1">
-                        <span className="fw-bold">←/→:</span> Mover
-                        izquierda/derecha
-                      </p>
-                      <p className="mb-1">
-                        <span className="fw-bold">↑:</span> Rotar pieza
-                      </p>
-                      <p className="mb-1">
-                        <span className="fw-bold">C:</span> Guardar pieza (Hold)
-                      </p>
-                    </div>
-                    <div className="col-6 text-md-start">
-                      <p className="mb-1">
-                        <span className="fw-bold">↓:</span> Bajar más rápido
-                      </p>
-                      <p className="mb-1">
-                        <span className="fw-bold">Espacio:</span> Soltar hasta
-                        abajo
-                      </p>
-                    </div>
-                  </div>
-                </div>
+            {/* Botón de ayuda */}
+            <div className="row m-2">
+              <div className="col-12">
+                <button
+                  onClick={toggleHelpModal}
+                  className="btn btn-link w-100 py-1 fs-6 fs-md-5"
+                >
+                  Controles y Consejos
+                </button>
               </div>
-            </div>
+              <HelpModal show={showHelpModal} onClose={toggleHelpModal} />
+              </div>
+            
           </div>
         </div>
       </div>
