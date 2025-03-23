@@ -3,6 +3,8 @@ import {BLOCK_SIZE, BOARD_WIDTH, BOARD_HEIGHT, COLORS, PIECES} from './../consta
 import {createMatrix, merge} from './../service/boardService';
 import {createPiece, collide, rotate} from './../service/pieceService';
 import {drawMatrix} from './../helpers/renderHelpers';
+import ScorePanel from './ScorePanel';
+
 
 const TetrisGame = () => {
 
@@ -20,6 +22,9 @@ const TetrisGame = () => {
   const [paused, setPaused] = useState(false);
   const [dropInterval, setDropInterval] = useState(1000);
   const [newRecord, setNewRecord] = useState(false);
+
+  const [gameTime, setGameTime] = useState(0);
+  const [gameTimeInterval, setGameTimeInterval] = useState(null);
 
   const [windowSize, setWindowSize] = useState({
     width: window.innerWidth,
@@ -41,6 +46,26 @@ const TetrisGame = () => {
       setHighScore(parseInt(savedHighScore, 10));
     }
   }, []);
+
+  // Controlar el temporizador de juego
+    useEffect(() => {
+      if (!gameOver && !paused) {
+        const interval = setInterval(() => {
+          setGameTime(prevTime => prevTime + 1);
+        }, 1000);
+        setGameTimeInterval(interval);
+        return () => clearInterval(interval);
+      } else if (gameTimeInterval) {
+        clearInterval(gameTimeInterval);
+      }
+    }, [gameOver, paused]);
+    
+    // Formatear tiempo de juego
+    const formatTime = (seconds) => {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    };
   
   // Inicializar el juego
   const initGame = useCallback(() => {
@@ -55,6 +80,7 @@ const TetrisGame = () => {
     setPaused(false);
     setDropInterval(1000);
     setNewRecord(false);
+    setGameTime(0);
     setPlayer(prev => ({
       ...prev,
       nextPiece
@@ -195,24 +221,29 @@ const TetrisGame = () => {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
       ctx.fillRect(0, 0, tetrisRef.current.width, tetrisRef.current.height);
       
-      ctx.font = '20px Arial';
+      ctx.font = 'bold 24px Arial';
       ctx.fillStyle = 'white';
       ctx.textAlign = 'center';
       ctx.fillText('GAME OVER', tetrisRef.current.width / 2, tetrisRef.current.height / 2);
       
       // Mostrar mensaje de nuevo récord si corresponde
       if (newRecord) {
+        ctx.font = 'bold 20px Arial';
         ctx.fillStyle = '#FFD700';
         ctx.fillText('¡NUEVO RÉCORD!', tetrisRef.current.width / 2, tetrisRef.current.height / 2 + 30);
       }
-    }
+      // Mostrar puntuación final
+      ctx.font = '18px Arial';
+      ctx.fillStyle = 'white';
+      ctx.fillText(`Puntuación: ${score}`, tetrisRef.current.width / 2, tetrisRef.current.height / 2 + 60);
+  }
     
     // Dibujar "Pausa" si es necesario
     if (paused && !gameOver) {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
       ctx.fillRect(0, 0, tetrisRef.current.width, tetrisRef.current.height);
       
-      ctx.font = '20px Arial';
+      ctx.font = '24px Arial';
       ctx.fillStyle = 'white';
       ctx.textAlign = 'center';
       ctx.fillText('PAUSA', tetrisRef.current.width / 2, tetrisRef.current.height / 2);
@@ -369,6 +400,10 @@ const TetrisGame = () => {
           event.preventDefault();
           playerRotate();
           break;
+        case 'p':
+          event.preventDefault();
+          setPaused(!paused);
+          break;
         case ' ':
           event.preventDefault();
           playerDropToBottom();
@@ -444,47 +479,39 @@ const TetrisGame = () => {
   };
 
   return (
-<div
-  className="container-fluidd-flex flex-column justify-content-center align-items-center py-3"
-  style={{
-    textAlign: "left",
-    backgroundImage: "linear-gradient(to bottom, rgb(5, 50, 123), rgb(64, 80, 95))",
-    backgroundRepeat: "no-repeat"
-     }}
->
-      
-      <div className="container" >
+    <div
+      className="container-fluidd-flex flex-column justify-content-center align-items-center py-3"
+      style={{
+        textAlign: "left",
+        backgroundImage:
+          "linear-gradient(to bottom, rgb(5, 50, 123), rgb(64, 80, 95))",
+        backgroundRepeat: "no-repeat",
+      }}
+    >
+      <div className="container">
         <div className="row justify-content-center">
           <div className="col-8">
-          
             <div className="text-center">
-              <img 
-                src="/logo.PNG" 
-                alt="Tetris" 
-                style={{ maxWidth: "100px", padding: "5px" }} 
+              <img
+                src="/logo.PNG"
+                alt="Tetris"
+                style={{ maxWidth: "100px", padding: "5px" }}
+                className="img-fluid"
               />
             </div>
 
             <div className="row justify-content-center flex-nowrap">
               {/* Panel de puntuación */}
-              <div className="col-5 d-flex">
-                <div className="card border-dark flex-fill">
-                  <div className="card-body p-2 text-center">
-                    <h5 className="fw-bold fs-6 fs-md-5">Puntuación:</h5>
-                    <p className="mb-2 fs-6 fs-md-5">{score}</p>
-                    <h5 className="fw-bold mt-2 fs-6 fs-md-5">Nivel:</h5>
-                    <p className="mb-2 fs-6 fs-md-5">{level}</p>
-                    <h5 className="fw-bold mt-2 fs-6 fs-md-5">Líneas:</h5>
-                    <p className="mb-0 fs-6 fs-md-5">{lines}</p>
-                    <hr />
-                    <h5 className="fw-bold mt-2 fs-6 fs-md-5">Récord:</h5>
-                    <p className={`mb-0 fs-6 fs-md-5 ${newRecord ? 'text-success fw-bold' : ''}`}>
-                      {highScore}
-                      {newRecord && ' ¡Nuevo!'}
-                    </p>
-                  </div>
-                </div>
-              </div>
+              < ScorePanel
+                score = {score}
+                highScore = {highScore}
+                level = {level}
+                lines = {lines}
+                linesToNextLevel = {10 - (lines % 10)}
+                gameTime = {gameTime}
+                />
+            
+              
 
               {/* Tablero de juego */}
               <div className="col-8 d-flex justify-content-center">
@@ -530,7 +557,7 @@ const TetrisGame = () => {
                 </button>
               </div>
             </div>
-            
+
             {/* Botón para reiniciar récord */}
             <div className="row m-2">
               <div className="col-12">
@@ -599,23 +626,32 @@ const TetrisGame = () => {
 
             {/* Keyboard instructions - visible only on desktop */}
             <div className="col-12 d-none d-md-block mt-3">
-                <div className="card border-dark">
-                  <div className="card-body p-3 text-center">
-                    <h5 className="fw-bold mb-2">Controles de teclado</h5>
-                    <div className="row mt-2">
-                      <div className="col-6 text-md-end">
-                        <p className="mb-1"><span className="fw-bold">←/→:</span> Mover izquierda/derecha</p>
-                        <p className="mb-1"><span className="fw-bold">↑:</span> Rotar pieza</p>
-                      </div>
-                      <div className="col-6 text-md-start">
-                        <p className="mb-1"><span className="fw-bold">↓:</span> Bajar más rápido</p>
-                        <p className="mb-1"><span className="fw-bold">Espacio:</span> Soltar hasta abajo</p>
-                      </div>
+              <div className="card border-dark">
+                <div className="card-body p-3 text-center">
+                  <h5 className="fw-bold mb-2">Controles de teclado</h5>
+                  <div className="row mt-2">
+                    <div className="col-6 text-md-end">
+                      <p className="mb-1">
+                        <span className="fw-bold">←/→:</span> Mover
+                        izquierda/derecha
+                      </p>
+                      <p className="mb-1">
+                        <span className="fw-bold">↑:</span> Rotar pieza
+                      </p>
+                    </div>
+                    <div className="col-6 text-md-start">
+                      <p className="mb-1">
+                        <span className="fw-bold">↓:</span> Bajar más rápido
+                      </p>
+                      <p className="mb-1">
+                        <span className="fw-bold">Espacio:</span> Soltar hasta
+                        abajo
+                      </p>
                     </div>
                   </div>
                 </div>
               </div>
-
+            </div>
           </div>
         </div>
       </div>
