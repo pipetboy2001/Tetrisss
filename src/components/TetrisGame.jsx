@@ -13,11 +13,13 @@ const TetrisGame = () => {
   const dropCounterRef = useRef(0);
   
   const [score, setScore] = useState(0);
+  const [highScore, setHighScore] = useState(0);
   const [level, setLevel] = useState(1);
   const [lines, setLines] = useState(0);
   const [gameOver, setGameOver] = useState(true);
   const [paused, setPaused] = useState(false);
   const [dropInterval, setDropInterval] = useState(1000);
+  const [newRecord, setNewRecord] = useState(false);
 
   const [windowSize, setWindowSize] = useState({
     width: window.innerWidth,
@@ -32,6 +34,14 @@ const TetrisGame = () => {
     nextPiece: null
   });
   
+  // Cargar récord del localStorage al inicio
+  useEffect(() => {
+    const savedHighScore = localStorage.getItem('tetrisHighScore');
+    if (savedHighScore) {
+      setHighScore(parseInt(savedHighScore, 10));
+    }
+  }, []);
+  
   // Inicializar el juego
   const initGame = useCallback(() => {
     const newBoard = createMatrix(BOARD_WIDTH, BOARD_HEIGHT);
@@ -44,6 +54,7 @@ const TetrisGame = () => {
     setGameOver(false);
     setPaused(false);
     setDropInterval(1000);
+    setNewRecord(false);
     setPlayer(prev => ({
       ...prev,
       nextPiece
@@ -51,7 +62,7 @@ const TetrisGame = () => {
     
     resetPlayer(newBoard, nextPiece);
     
-  }, [createPiece]);
+  }, []);
   
   // Reiniciar posición del jugador
   const resetPlayer = useCallback((currentBoard, nextPiece) => {
@@ -72,10 +83,17 @@ const TetrisGame = () => {
     // Comprobar si la posición inicial es inválida (juego terminado)
     if (collide(currentBoard, newPlayer)) {
       setGameOver(true);
+      
+      // Comprobar si se ha batido el récord cuando termina el juego
+      if (score > highScore) {
+        setHighScore(score);
+        localStorage.setItem('tetrisHighScore', score.toString());
+        setNewRecord(true);
+      }
     }
     
     drawNextPiece(newNextPiece);
-  }, [createPiece, collide]);
+  }, [collide, highScore, score]);
   
   // Limpiar filas completas
   const clearLines = useCallback(() => {
@@ -106,6 +124,13 @@ const TetrisGame = () => {
       setLines(newLines);
       setBoard(newBoard);
       
+      // Comprobar si se ha batido el récord durante el juego
+      if (newScore > highScore) {
+        setHighScore(newScore);
+        localStorage.setItem('tetrisHighScore', newScore.toString());
+        setNewRecord(true);
+      }
+      
       // Actualizar nivel
       const newLevel = Math.floor(newLines / 10) + 1;
       if (newLevel > level) {
@@ -113,7 +138,7 @@ const TetrisGame = () => {
         setDropInterval(Math.max(100, 1000 - (newLevel - 1) * 50));
       }
     }
-  }, [board, level, score, lines]);
+  }, [board, level, score, lines, highScore]);
   
 
   
@@ -148,7 +173,7 @@ const TetrisGame = () => {
         }
       });
     });
-  }, [BLOCK_SIZE, COLORS]);
+  }, []);
   
   // Dibujar el juego
   const draw = useCallback(() => {
@@ -174,6 +199,12 @@ const TetrisGame = () => {
       ctx.fillStyle = 'white';
       ctx.textAlign = 'center';
       ctx.fillText('GAME OVER', tetrisRef.current.width / 2, tetrisRef.current.height / 2);
+      
+      // Mostrar mensaje de nuevo récord si corresponde
+      if (newRecord) {
+        ctx.fillStyle = '#FFD700';
+        ctx.fillText('¡NUEVO RÉCORD!', tetrisRef.current.width / 2, tetrisRef.current.height / 2 + 30);
+      }
     }
     
     // Dibujar "Pausa" si es necesario
@@ -186,7 +217,7 @@ const TetrisGame = () => {
       ctx.textAlign = 'center';
       ctx.fillText('PAUSA', tetrisRef.current.width / 2, tetrisRef.current.height / 2);
     }
-  }, [board, drawMatrix, gameOver, paused, player]);
+  }, [board, gameOver, paused, player, newRecord]);
   
   // Mover la pieza del jugador
   const playerMove = useCallback((dir) => {
@@ -196,7 +227,7 @@ const TetrisGame = () => {
     if (!collide(board, newPlayer)) {
       setPlayer(newPlayer);
     }
-  }, [player, board, collide]);
+  }, [player, board]);
   
 
   
@@ -221,7 +252,7 @@ const TetrisGame = () => {
     }
     
     setPlayer(newPlayer);
-  }, [player, board, collide, rotate]);
+  }, [player, board]);
   
   // Mover la pieza hacia abajo
   const playerDrop = useCallback(() => {
@@ -241,7 +272,7 @@ const TetrisGame = () => {
     }
     
     dropCounterRef.current = 0;
-  }, [player, board, collide, merge, resetPlayer, clearLines]);
+  }, [player, board, clearLines, resetPlayer]);
   
   // Caída rápida
   const playerDropToBottom = useCallback(() => {
@@ -263,7 +294,7 @@ const TetrisGame = () => {
     clearLines();
     
     dropCounterRef.current = 0;
-  }, [player, board, collide, merge, resetPlayer, clearLines]);
+  }, [player, board, clearLines, resetPlayer]);
   
   // Actualizar el juego
   const update = useCallback((time = 0) => {
@@ -310,7 +341,7 @@ const TetrisGame = () => {
       const ctx = tetrisRef.current.getContext('2d');
       ctx.scale(blockScale / BLOCK_SIZE, blockScale / BLOCK_SIZE);
     }
-  }, [windowSize, BOARD_WIDTH, BOARD_HEIGHT]);
+  }, [windowSize]);
   
   // Configurar event listeners y iniciar el juego
   useEffect(() => {
@@ -378,7 +409,7 @@ const TetrisGame = () => {
         drawNextPiece(nextPiece);
       }
     }
-  }, [player, createPiece, drawNextPiece]);
+  }, [player, drawNextPiece]);
   
   // Configurar botones táctiles
   const setupButtonTouch = (action) => {
@@ -403,6 +434,13 @@ const TetrisGame = () => {
         lastTimeRef.current = performance.now();
       }
     }
+  };
+  
+  // Función para reiniciar el récord
+  const handleResetHighScore = () => {
+    localStorage.removeItem('tetrisHighScore');
+    setHighScore(0);
+    setNewRecord(false);
   };
 
   return (
@@ -438,6 +476,12 @@ const TetrisGame = () => {
                     <p className="mb-2 fs-6 fs-md-5">{level}</p>
                     <h5 className="fw-bold mt-2 fs-6 fs-md-5">Líneas:</h5>
                     <p className="mb-0 fs-6 fs-md-5">{lines}</p>
+                    <hr />
+                    <h5 className="fw-bold mt-2 fs-6 fs-md-5">Récord:</h5>
+                    <p className={`mb-0 fs-6 fs-md-5 ${newRecord ? 'text-success fw-bold' : ''}`}>
+                      {highScore}
+                      {newRecord && ' ¡Nuevo!'}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -483,6 +527,18 @@ const TetrisGame = () => {
                   className="btn btn-primary w-100 py-2 fs-6 fs-md-5"
                 >
                   {gameOver ? "Iniciar Juego" : paused ? "Reanudar" : "Pausar"}
+                </button>
+              </div>
+            </div>
+            
+            {/* Botón para reiniciar récord */}
+            <div className="row m-2">
+              <div className="col-12">
+                <button
+                  onClick={handleResetHighScore}
+                  className="btn btn-outline-warning w-100 py-1 fs-6 fs-md-5"
+                >
+                  Reiniciar Récord
                 </button>
               </div>
             </div>
