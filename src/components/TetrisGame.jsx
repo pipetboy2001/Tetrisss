@@ -421,7 +421,7 @@ const TetrisGame = () => {
           
             <div className="text-center">
               <img 
-                src="/public/logo.PNG" 
+                src="/logo.PNG" 
                 alt="Tetris" 
                 style={{ maxWidth: "100px", padding: "5px" }} 
               />
