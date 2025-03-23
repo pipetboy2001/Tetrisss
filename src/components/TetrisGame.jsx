@@ -7,6 +7,8 @@ import ScorePanel from './ScorePanel';
 import PiecePanels from './PiecePanels';
 import HelpModal from './HelpModal';
 import ControlButtons from './ControlButtons';
+import NavBar from './NavBar';
+import TactileButtons from './TactileButtons';
 
 const TetrisGame = () => {
 
@@ -579,7 +581,7 @@ const TetrisGame = () => {
 
   return (
     <div
-      className="container-fluidd-flex flex-column justify-content-center align-items-center py-3"
+      className="container-fluidd-flex flex-column justify-content-center align-items-center "
       style={{
         textAlign: "left",
         backgroundImage:
@@ -587,17 +589,12 @@ const TetrisGame = () => {
         backgroundRepeat: "no-repeat",
       }}
     >
+      <NavBar toggleHelpModal={toggleHelpModal} />
+
       <div className="container">
         <div className="row justify-content-center">
           <div className="col-8">
-            <div className="text-center">
-              <img
-                src="/logo.PNG"
-                alt="Tetris"
-                style={{ maxWidth: "100px", padding: "5px" }}
-                className="img-fluid"
-              />
-            </div>
+            
 
             <div className="row justify-content-center flex-nowrap">
               {/* Panel de puntuación */}
@@ -641,85 +638,19 @@ const TetrisGame = () => {
               handleResetHighScore={handleResetHighScore}
             />
             
-
             {/* Controles táctiles - solo visibles en móvil */}
-            <div className="row d-md-none">
-              <div className="col-12">
-                <div className="row g-2 mb-2">
-                  <div className="col-4">
-                    <button
-                      {...setupButtonTouch(() => playerMove(-1))}
-                      className="btn btn-primary w-100 py-3 fs-4"
-                      aria-label="Mover izquierda"
-                    >
-                      ←
-                    </button>
-                  </div>
-                  <div className="col-4">
-                    <button
-                      {...setupButtonTouch(() => playerRotate())}
-                      className="btn btn-primary w-100 py-3 fs-6"
-                    >
-                      Rotar
-                    </button>
-                  </div>
-                  <div className="col-4">
-                    <button
-                      {...setupButtonTouch(() => playerMove(1))}
-                      className="btn btn-primary w-100 py-3 fs-4"
-                      aria-label="Mover derecha"
-                    >
-                      →
-                    </button>
-                  </div>
-                </div>
-                <div className="row g-2 mb-2">
-                  <div className="col-8">
-                    <button
-                      {...setupButtonTouch(() => playerDrop())}
-                      className="btn btn-primary w-100 py-3 fs-4"
-                      aria-label="Bajar"
-                    >
-                      ↓
-                    </button>
-                  </div>
-                  <div className="col-4">
-                    <button
-                      {...setupButtonTouch(() => playerDropToBottom())}
-                      className="btn btn-primary w-100 py-3 fs-4"
-                      aria-label="Soltar hasta abajo"
-                    >
-                      ⤓
-                    </button>
-                  </div>
-                </div>
-                <div className="row g-2">
-                  <div className="col-12">
-                    <button
-                      {...setupButtonTouch(() => holdPiece())}
-                      className="btn btn-info w-100 py-3 fs-6"
-                      aria-label="Guardar pieza"
-                    >
-                      Hold
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <TactileButtons
+              playerMove={playerMove}
+              playerRotate={playerRotate}
+              playerDrop={playerDrop}
+              playerDropToBottom={playerDropToBottom}
+              holdPiece={holdPiece}
+              setupButtonTouch={setupButtonTouch}
+            />
 
-            {/* Botón de ayuda */}
-            <div className="row m-2">
-              <div className="col-12">
-                <button
-                  onClick={toggleHelpModal}
-                  className="btn btn-link w-100 py-1 fs-6 fs-md-5"
-                >
-                  Controles y Consejos
-                </button>
-              </div>
-              <HelpModal show={showHelpModal} onClose={toggleHelpModal} />
-              </div>
-            </div>
+            
+
+          </div>
         </div>
       </div>
     </div>
