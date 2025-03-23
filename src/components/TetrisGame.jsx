@@ -3,11 +3,18 @@ import {BLOCK_SIZE, BOARD_WIDTH, BOARD_HEIGHT, COLORS, PIECES} from './../consta
 import {createMatrix, merge} from './../service/boardService';
 import {createPiece, collide, rotate} from './../service/pieceService';
 import {drawMatrix} from './../helpers/renderHelpers';
+import ScorePanel from './ScorePanel';
+import PiecePanels from './PiecePanels';
+import HelpModal from './HelpModal';
+import ControlButtons from './ControlButtons';
+import NavBar from './NavBar';
+import TactileButtons from './TactileButtons';
 
 const TetrisGame = () => {
 
   const tetrisRef = useRef(null);
   const nextPieceRef = useRef(null);
+  const holdPieceRef = useRef(null); // Referencia para el canvas de la pieza guardada
   const requestRef = useRef(null);
   const lastTimeRef = useRef(0);
   const dropCounterRef = useRef(0);
@@ -20,18 +27,31 @@ const TetrisGame = () => {
   const [paused, setPaused] = useState(false);
   const [dropInterval, setDropInterval] = useState(1000);
   const [newRecord, setNewRecord] = useState(false);
+  const [holdUsed, setHoldUsed] = useState(false); // Estado para controlar si ya se usó hold en esta pieza
+
+  // Añadir este estado para controlar la visibilidad del modal
+  const [showHelpModal, setShowHelpModal] = useState(false);
+
+  const [gameTime, setGameTime] = useState(0);
+  const [gameTimeInterval, setGameTimeInterval] = useState(null);
 
   const [windowSize, setWindowSize] = useState({
     width: window.innerWidth,
     height: window.innerHeight
   });
+
+  // Función para abrir/cerrar el modal
+  const toggleHelpModal = () => {
+    setShowHelpModal(!showHelpModal);
+  };
   
   // Estado del juego
   const [board, setBoard] = useState(() => createMatrix(BOARD_WIDTH, BOARD_HEIGHT));
   const [player, setPlayer] = useState({
     pos: { x: 0, y: 0 },
     matrix: null,
-    nextPiece: null
+    nextPiece: null,
+    holdPiece: null  // Añadido para guardar la pieza en hold
   });
   
   // Cargar récord del localStorage al inicio
@@ -41,6 +61,26 @@ const TetrisGame = () => {
       setHighScore(parseInt(savedHighScore, 10));
     }
   }, []);
+
+  // Controlar el temporizador de juego
+    useEffect(() => {
+      if (!gameOver && !paused) {
+        const interval = setInterval(() => {
+          setGameTime(prevTime => prevTime + 1);
+        }, 1000);
+        setGameTimeInterval(interval);
+        return () => clearInterval(interval);
+      } else if (gameTimeInterval) {
+        clearInterval(gameTimeInterval);
+      }
+    }, [gameOver, paused]);
+    
+    // Formatear tiempo de juego
+    const formatTime = (seconds) => {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    };
   
   // Inicializar el juego
   const initGame = useCallback(() => {
@@ -55,9 +95,12 @@ const TetrisGame = () => {
     setPaused(false);
     setDropInterval(1000);
     setNewRecord(false);
+    setGameTime(0);
+    setHoldUsed(false); // Reiniciar el estado de hold al iniciar un nuevo juego
     setPlayer(prev => ({
       ...prev,
-      nextPiece
+      nextPiece,
+      holdPiece: null // Reiniciar la pieza guardada
     }));
     
     resetPlayer(newBoard, nextPiece);
@@ -75,7 +118,8 @@ const TetrisGame = () => {
         x: Math.floor(BOARD_WIDTH / 2) - Math.floor(matrix[0].length / 2)
       },
       matrix: matrix,
-      nextPiece: newNextPiece
+      nextPiece: newNextPiece,
+      holdPiece: player.holdPiece // Mantener la pieza guardada
     };
     
     setPlayer(newPlayer);
@@ -93,7 +137,13 @@ const TetrisGame = () => {
     }
     
     drawNextPiece(newNextPiece);
-  }, [collide, highScore, score]);
+    if (newPlayer.holdPiece) {
+      drawHoldPiece(newPlayer.holdPiece);
+    }
+    
+    // Restablecer el estado de hold con cada nueva pieza
+    setHoldUsed(false);
+  }, [collide, highScore, score, player.holdPiece]);
   
   // Limpiar filas completas
   const clearLines = useCallback(() => {
@@ -140,7 +190,80 @@ const TetrisGame = () => {
     }
   }, [board, level, score, lines, highScore]);
   
-
+  // Función para guardar pieza (hold)
+  const holdPiece = useCallback(() => {
+    // Si ya se usó hold para esta pieza, ignorar
+    if (holdUsed || gameOver || paused) return;
+    
+    const newPlayer = { ...player };
+    
+    if (newPlayer.holdPiece === null) {
+      // Si no hay pieza guardada, guardar la actual y obtener la siguiente
+      newPlayer.holdPiece = newPlayer.matrix;
+      newPlayer.matrix = newPlayer.nextPiece;
+      newPlayer.nextPiece = createPiece();
+      
+      // Reiniciar posición
+      newPlayer.pos = {
+        y: 0,
+        x: Math.floor(BOARD_WIDTH / 2) - Math.floor(newPlayer.matrix[0].length / 2)
+      };
+      
+      drawNextPiece(newPlayer.nextPiece);
+    } else {
+      // Si ya hay una pieza guardada, intercambiar
+      const temp = newPlayer.holdPiece;
+      newPlayer.holdPiece = newPlayer.matrix;
+      newPlayer.matrix = temp;
+      
+      // Reiniciar posición
+      newPlayer.pos = {
+        y: 0,
+        x: Math.floor(BOARD_WIDTH / 2) - Math.floor(newPlayer.matrix[0].length / 2)
+      };
+    }
+    
+    // Dibujar pieza guardada
+    drawHoldPiece(newPlayer.holdPiece);
+    
+    // Marcar que se ha usado hold para esta pieza
+    setHoldUsed(true);
+    
+    setPlayer(newPlayer);
+  }, [player, holdUsed, gameOver, paused]);
+  
+  // Dibujar la pieza guardada
+  const drawHoldPiece = useCallback((holdPiece) => {
+    if (!holdPieceRef.current) return;
+    
+    const holdPieceCtx = holdPieceRef.current.getContext('2d');
+    const canvas = holdPieceRef.current;
+    holdPieceCtx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    const xOffset = (canvas.width - holdPiece[0].length * BLOCK_SIZE) / 2;
+    const yOffset = (canvas.height - holdPiece.length * BLOCK_SIZE) / 2;
+    
+    holdPiece.forEach((row, y) => {
+      row.forEach((value, x) => {
+        if (value !== 0) {
+          holdPieceCtx.fillStyle = COLORS[value];
+          holdPieceCtx.fillRect(
+            xOffset + x * BLOCK_SIZE,
+            yOffset + y * BLOCK_SIZE,
+            BLOCK_SIZE,
+            BLOCK_SIZE
+          );
+          holdPieceCtx.strokeStyle = 'black';
+          holdPieceCtx.strokeRect(
+            xOffset + x * BLOCK_SIZE,
+            yOffset + y * BLOCK_SIZE,
+            BLOCK_SIZE,
+            BLOCK_SIZE
+          );
+        }
+      });
+    });
+  }, []);
   
   // Dibujar la siguiente pieza
   const drawNextPiece = useCallback((nextPiece) => {
@@ -195,29 +318,34 @@ const TetrisGame = () => {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
       ctx.fillRect(0, 0, tetrisRef.current.width, tetrisRef.current.height);
       
-      ctx.font = '20px Arial';
+      ctx.font = 'bold 24px Arial';
       ctx.fillStyle = 'white';
       ctx.textAlign = 'center';
       ctx.fillText('GAME OVER', tetrisRef.current.width / 2, tetrisRef.current.height / 2);
       
       // Mostrar mensaje de nuevo récord si corresponde
       if (newRecord) {
+        ctx.font = 'bold 20px Arial';
         ctx.fillStyle = '#FFD700';
         ctx.fillText('¡NUEVO RÉCORD!', tetrisRef.current.width / 2, tetrisRef.current.height / 2 + 30);
       }
-    }
+      // Mostrar puntuación final
+      ctx.font = '18px Arial';
+      ctx.fillStyle = 'white';
+      ctx.fillText(`Puntuación: ${score}`, tetrisRef.current.width / 2, tetrisRef.current.height / 2 + 60);
+  }
     
     // Dibujar "Pausa" si es necesario
     if (paused && !gameOver) {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
       ctx.fillRect(0, 0, tetrisRef.current.width, tetrisRef.current.height);
       
-      ctx.font = '20px Arial';
+      ctx.font = '24px Arial';
       ctx.fillStyle = 'white';
       ctx.textAlign = 'center';
       ctx.fillText('PAUSA', tetrisRef.current.width / 2, tetrisRef.current.height / 2);
     }
-  }, [board, gameOver, paused, player, newRecord]);
+  }, [board, gameOver, paused, player, newRecord, score]);
   
   // Mover la pieza del jugador
   const playerMove = useCallback((dir) => {
@@ -228,8 +356,6 @@ const TetrisGame = () => {
       setPlayer(newPlayer);
     }
   }, [player, board]);
-  
-
   
   // Rotar la pieza del jugador
   const playerRotate = useCallback(() => {
@@ -369,9 +495,18 @@ const TetrisGame = () => {
           event.preventDefault();
           playerRotate();
           break;
+        case 'p':
+          event.preventDefault();
+          setPaused(!paused);
+          break;
         case ' ':
           event.preventDefault();
           playerDropToBottom();
+          break;
+        case 'c':
+        case 'C':
+          event.preventDefault();
+          holdPiece();
           break;
         default:
           break;
@@ -388,7 +523,7 @@ const TetrisGame = () => {
       window.removeEventListener('keydown', handleKeyDown);
       cancelAnimationFrame(requestRef.current);
     };
-  }, [handleResize, playerMove, playerDrop, playerRotate, playerDropToBottom, update, gameOver, paused]);
+  }, [handleResize, playerMove, playerDrop, playerRotate, playerDropToBottom, holdPiece, update, gameOver, paused]);
   
   // Iniciar juego
   useEffect(() => {
@@ -402,7 +537,8 @@ const TetrisGame = () => {
           x: Math.floor(BOARD_WIDTH / 2) - Math.floor(initialMatrix[0].length / 2)
         },
         matrix: initialMatrix,
-        nextPiece: nextPiece
+        nextPiece: nextPiece,
+        holdPiece: null
       });
       
       if (nextPieceRef.current) {
@@ -444,47 +580,43 @@ const TetrisGame = () => {
   };
 
   return (
-<div
-  className="container-fluidd-flex flex-column justify-content-center align-items-center py-3"
-  style={{
-    textAlign: "left",
-    backgroundImage: "linear-gradient(to bottom, rgb(5, 50, 123), rgb(64, 80, 95))",
-    backgroundRepeat: "no-repeat"
-     }}
->
-      
-      <div className="container" >
+    <div
+      className="container-fluidd-flex flex-column justify-content-center align-items-center "
+      style={{
+        textAlign: "left",
+        backgroundImage:
+          "linear-gradient(to bottom, rgb(5, 50, 123), rgb(64, 80, 95))",
+        backgroundRepeat: "no-repeat",
+      }}
+    >
+      <NavBar 
+      toggleHelpModal={toggleHelpModal} 
+      handleResetHighScore={handleResetHighScore}
+    />
+    {/* Añadir el modal de ayuda aquí */}
+    <HelpModal 
+      show={showHelpModal} 
+      onClose={toggleHelpModal} 
+    />
+
+
+      <div className="container">
         <div className="row justify-content-center">
           <div className="col-8">
-          
-            <div className="text-center">
-              <img 
-                src="/logo.PNG" 
-                alt="Tetris" 
-                style={{ maxWidth: "100px", padding: "5px" }} 
-              />
-            </div>
+            
 
             <div className="row justify-content-center flex-nowrap">
               {/* Panel de puntuación */}
-              <div className="col-5 d-flex">
-                <div className="card border-dark flex-fill">
-                  <div className="card-body p-2 text-center">
-                    <h5 className="fw-bold fs-6 fs-md-5">Puntuación:</h5>
-                    <p className="mb-2 fs-6 fs-md-5">{score}</p>
-                    <h5 className="fw-bold mt-2 fs-6 fs-md-5">Nivel:</h5>
-                    <p className="mb-2 fs-6 fs-md-5">{level}</p>
-                    <h5 className="fw-bold mt-2 fs-6 fs-md-5">Líneas:</h5>
-                    <p className="mb-0 fs-6 fs-md-5">{lines}</p>
-                    <hr />
-                    <h5 className="fw-bold mt-2 fs-6 fs-md-5">Récord:</h5>
-                    <p className={`mb-0 fs-6 fs-md-5 ${newRecord ? 'text-success fw-bold' : ''}`}>
-                      {highScore}
-                      {newRecord && ' ¡Nuevo!'}
-                    </p>
-                  </div>
-                </div>
-              </div>
+              < ScorePanel
+                score = {score}
+                highScore = {highScore}
+                level = {level}
+                lines = {lines}
+                linesToNextLevel = {10 - (lines % 10)}
+                gameTime = {gameTime}
+                />
+            
+              
 
               {/* Tablero de juego */}
               <div className="col-8 d-flex justify-content-center">
@@ -500,121 +632,32 @@ const TetrisGame = () => {
                 ></canvas>
               </div>
 
-              {/* Panel de siguiente pieza */}
-              <div className="col-5 d-flex">
-                <div className="card border-dark flex-fill">
-                  <div className="card-body p-2 p-md-3 text-center">
-                    <h5 className="fw-bold fs-6 fs-md-5">Siguiente</h5>
-                    <div className="d-flex justify-content-center align-items-center mt-2">
-                      <canvas
-                        ref={nextPieceRef}
-                        width={80}
-                        height={80}
-                        className="border border-dark"
-                        style={{ maxWidth: "100%", height: "auto" }}
-                      ></canvas>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                <PiecePanels
+                  holdPieceRef={holdPieceRef}
+                  nextPieceRef={nextPieceRef}
+                />
+              
             </div>
-
-            {/* Botón de iniciar/pausar/reanudar */}
-            <div className="row m-2">
-              <div className="col-12">
-                <button
-                  onClick={handleStartButton}
-                  className="btn btn-primary w-100 py-2 fs-6 fs-md-5"
-                >
-                  {gameOver ? "Iniciar Juego" : paused ? "Reanudar" : "Pausar"}
-                </button>
-              </div>
-            </div>
+              
+            {/* Controles de juego */}
+            <ControlButtons
+              handleStartButton={handleStartButton}
+              gameOver={gameOver}
+              paused={paused}
+              
+            />
             
-            {/* Botón para reiniciar récord */}
-            <div className="row m-2">
-              <div className="col-12">
-                <button
-                  onClick={handleResetHighScore}
-                  className="btn btn-outline-warning w-100 py-1 fs-6 fs-md-5"
-                >
-                  Reiniciar Récord
-                </button>
-              </div>
-            </div>
-
             {/* Controles táctiles - solo visibles en móvil */}
-            <div className="row d-md-none">
-              <div className="col-12">
-                <div className="row g-2 mb-2">
-                  <div className="col-4">
-                    <button
-                      {...setupButtonTouch(() => playerMove(-1))}
-                      className="btn btn-primary w-100 py-3 fs-4"
-                      aria-label="Mover izquierda"
-                    >
-                      ←
-                    </button>
-                  </div>
-                  <div className="col-4">
-                    <button
-                      {...setupButtonTouch(() => playerRotate())}
-                      className="btn btn-primary w-100 py-3 fs-6"
-                    >
-                      Rotar
-                    </button>
-                  </div>
-                  <div className="col-4">
-                    <button
-                      {...setupButtonTouch(() => playerMove(1))}
-                      className="btn btn-primary w-100 py-3 fs-4"
-                      aria-label="Mover derecha"
-                    >
-                      →
-                    </button>
-                  </div>
-                </div>
-                <div className="row g-2">
-                  <div className="col-8">
-                    <button
-                      {...setupButtonTouch(() => playerDrop())}
-                      className="btn btn-primary w-100 py-3 fs-4"
-                      aria-label="Bajar"
-                    >
-                      ↓
-                    </button>
-                  </div>
-                  <div className="col-4">
-                    <button
-                      {...setupButtonTouch(() => playerDropToBottom())}
-                      className="btn btn-primary w-100 py-3 fs-4"
-                      aria-label="Soltar hasta abajo"
-                    >
-                      ⤓
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <TactileButtons
+              playerMove={playerMove}
+              playerRotate={playerRotate}
+              playerDrop={playerDrop}
+              playerDropToBottom={playerDropToBottom}
+              holdPiece={holdPiece}
+              setupButtonTouch={setupButtonTouch}
+            />
 
-            {/* Keyboard instructions - visible only on desktop */}
-            <div className="col-12 d-none d-md-block mt-3">
-                <div className="card border-dark">
-                  <div className="card-body p-3 text-center">
-                    <h5 className="fw-bold mb-2">Controles de teclado</h5>
-                    <div className="row mt-2">
-                      <div className="col-6 text-md-end">
-                        <p className="mb-1"><span className="fw-bold">←/→:</span> Mover izquierda/derecha</p>
-                        <p className="mb-1"><span className="fw-bold">↑:</span> Rotar pieza</p>
-                      </div>
-                      <div className="col-6 text-md-start">
-                        <p className="mb-1"><span className="fw-bold">↓:</span> Bajar más rápido</p>
-                        <p className="mb-1"><span className="fw-bold">Espacio:</span> Soltar hasta abajo</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            
 
           </div>
         </div>
