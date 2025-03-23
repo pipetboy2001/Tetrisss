@@ -404,92 +404,115 @@ const TetrisGame = () => {
       }
     }
   };
-  
+
   return (
-    <div className="container-fluid min-vh-100 bg-light d-flex flex-column justify-content-center align-items-center py-4">
-      <div className="container">
+<div
+  className="container-fluidd-flex flex-column justify-content-center align-items-center py-3"
+  style={{
+    textAlign: "left",
+    backgroundImage: "linear-gradient(to bottom, rgb(5, 50, 123), rgb(64, 80, 95))",
+    backgroundRepeat: "no-repeat"
+     }}
+>
+      
+      <div className="container" >
         <div className="row justify-content-center">
-          <div className="col-12 col-lg-10 col-xl-8">
-            <h1 className="text-center fw-bold mb-4">Tetris</h1>
-            
-            <div className="row mb-4">
-              <div className="col-md-8 mb-3 mb-md-0">
-                <div className="card border-dark h-100">
-                  <div className="card-body">
-                    <div className="row text-center">
-                      <div className="col-4">
-                        <h5 className="fw-bold">Puntuación:</h5>
-                        <p className="fs-5">{score}</p>
-                      </div>
-                      <div className="col-4">
-                        <h5 className="fw-bold">Nivel:</h5>
-                        <p className="fs-5">{level}</p>
-                      </div>
-                      <div className="col-4">
-                        <h5 className="fw-bold">Líneas:</h5>
-                        <p className="fs-5">{lines}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="col-md-4">
-                <div className="card border-dark h-100">
-                  <div className="card-body text-center">
-                    <h5 className="fw-bold">Siguiente</h5>
-                    <div className="d-flex justify-content-center">
-                      <canvas ref={nextPieceRef} width={80} height={80}></canvas>
-                    </div>
-                  </div>
-                </div>
-              </div>
+          <div className="col-8">
+          
+            <div className="text-center">
+              <img 
+                src="/public/logo.PNG" 
+                alt="Tetris" 
+                style={{ maxWidth: "100px", padding: "5px" }} 
+              />
             </div>
-            
-            <div className="row justify-content-center mb-4">
-              <div className="col-12 text-center">
-                <canvas 
-                  ref={tetrisRef} 
-                  style={{ backgroundColor: '#111', maxWidth: '100%' }} 
+
+            <div className="row justify-content-center flex-nowrap">
+              {/* Panel de puntuación */}
+              <div className="col-5 d-flex">
+                <div className="card border-dark flex-fill">
+                  <div className="card-body p-2 text-center">
+                    <h5 className="fw-bold fs-6 fs-md-5">Puntuación:</h5>
+                    <p className="mb-2 fs-6 fs-md-5">{score}</p>
+                    <h5 className="fw-bold mt-2 fs-6 fs-md-5">Nivel:</h5>
+                    <p className="mb-2 fs-6 fs-md-5">{level}</p>
+                    <h5 className="fw-bold mt-2 fs-6 fs-md-5">Líneas:</h5>
+                    <p className="mb-0 fs-6 fs-md-5">{lines}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tablero de juego */}
+              <div className="col-8 d-flex justify-content-center">
+                <canvas
+                  ref={tetrisRef}
                   className="border border-dark"
+                  style={{
+                    backgroundColor: "#111",
+                    maxWidth: "100%",
+                    height: "auto",
+                    aspectRatio: "1/2",
+                  }}
                 ></canvas>
               </div>
+
+              {/* Panel de siguiente pieza */}
+              <div className="col-5 d-flex">
+                <div className="card border-dark flex-fill">
+                  <div className="card-body p-2 p-md-3 text-center">
+                    <h5 className="fw-bold fs-6 fs-md-5">Siguiente</h5>
+                    <div className="d-flex justify-content-center align-items-center mt-2">
+                      <canvas
+                        ref={nextPieceRef}
+                        width={80}
+                        height={80}
+                        className="border border-dark"
+                        style={{ maxWidth: "100%", height: "auto" }}
+                      ></canvas>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-            
-            <div className="row mb-4">
+
+            {/* Botón de iniciar/pausar/reanudar */}
+            <div className="row m-2">
               <div className="col-12">
-                <button 
+                <button
                   onClick={handleStartButton}
-                  className="btn btn-primary w-100 py-2 fs-5"
+                  className="btn btn-primary w-100 py-2 fs-6 fs-md-5"
                 >
-                  {gameOver ? "Iniciar Juego" : (paused ? "Reanudar" : "Pausar")}
+                  {gameOver ? "Iniciar Juego" : paused ? "Reanudar" : "Pausar"}
                 </button>
               </div>
             </div>
-            
+
+            {/* Controles táctiles - solo visibles en móvil */}
             <div className="row d-md-none">
               <div className="col-12">
                 <div className="row g-2 mb-2">
                   <div className="col-4">
-                    <button 
+                    <button
                       {...setupButtonTouch(() => playerMove(-1))}
-                      className="btn btn-primary w-100 py-2 fs-5"
+                      className="btn btn-primary w-100 py-3 fs-4"
+                      aria-label="Mover izquierda"
                     >
                       ←
                     </button>
                   </div>
                   <div className="col-4">
-                    <button 
+                    <button
                       {...setupButtonTouch(() => playerRotate())}
-                      className="btn btn-primary w-100 py-2 fs-5"
+                      className="btn btn-primary w-100 py-3 fs-6"
                     >
                       Rotar
                     </button>
                   </div>
                   <div className="col-4">
-                    <button 
+                    <button
                       {...setupButtonTouch(() => playerMove(1))}
-                      className="btn btn-primary w-100 py-2 fs-5"
+                      className="btn btn-primary w-100 py-3 fs-4"
+                      aria-label="Mover derecha"
                     >
                       →
                     </button>
@@ -497,17 +520,19 @@ const TetrisGame = () => {
                 </div>
                 <div className="row g-2">
                   <div className="col-8">
-                    <button 
+                    <button
                       {...setupButtonTouch(() => playerDrop())}
-                      className="btn btn-primary w-100 py-2 fs-5"
+                      className="btn btn-primary w-100 py-3 fs-4"
+                      aria-label="Bajar"
                     >
                       ↓
                     </button>
                   </div>
                   <div className="col-4">
-                    <button 
+                    <button
                       {...setupButtonTouch(() => playerDropToBottom())}
-                      className="btn btn-primary w-100 py-2 fs-5"
+                      className="btn btn-primary w-100 py-3 fs-4"
+                      aria-label="Soltar hasta abajo"
                     >
                       ⤓
                     </button>
@@ -515,11 +540,31 @@ const TetrisGame = () => {
                 </div>
               </div>
             </div>
+
+            {/* Keyboard instructions - visible only on desktop */}
+            <div className="col-12 d-none d-md-block mt-3">
+                <div className="card border-dark">
+                  <div className="card-body p-3 text-center">
+                    <h5 className="fw-bold mb-2">Controles de teclado</h5>
+                    <div className="row mt-2">
+                      <div className="col-6 text-md-end">
+                        <p className="mb-1"><span className="fw-bold">←/→:</span> Mover izquierda/derecha</p>
+                        <p className="mb-1"><span className="fw-bold">↑:</span> Rotar pieza</p>
+                      </div>
+                      <div className="col-6 text-md-start">
+                        <p className="mb-1"><span className="fw-bold">↓:</span> Bajar más rápido</p>
+                        <p className="mb-1"><span className="fw-bold">Espacio:</span> Soltar hasta abajo</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
           </div>
         </div>
       </div>
     </div>
   );
-}
+};
 
 export default TetrisGame;
