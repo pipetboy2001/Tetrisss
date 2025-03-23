@@ -75,13 +75,7 @@ const TetrisGame = () => {
       }
     }, [gameOver, paused]);
     
-    // Formatear tiempo de juego
-    const formatTime = (seconds) => {
-      const mins = Math.floor(seconds / 60);
-      const secs = seconds % 60;
-      return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-    };
-  
+
   // Inicializar el juego
   const initGame = useCallback(() => {
     const newBoard = createMatrix(BOARD_WIDTH, BOARD_HEIGHT);
@@ -589,23 +583,24 @@ const TetrisGame = () => {
         backgroundRepeat: "no-repeat",
       }}
     >
+
+    {/* NavBar*/}
       <NavBar 
       toggleHelpModal={toggleHelpModal} 
       handleResetHighScore={handleResetHighScore}
     />
-    {/* Añadir el modal de ayuda aquí */}
     <HelpModal 
       show={showHelpModal} 
       onClose={toggleHelpModal} 
     />
 
-
+      {/* contenedor del juego*/}
       <div className="container">
         <div className="row justify-content-center">
           <div className="col-8">
-            
 
             <div className="row justify-content-center flex-nowrap">
+
               {/* Panel de puntuación */}
               < ScorePanel
                 score = {score}
@@ -614,10 +609,9 @@ const TetrisGame = () => {
                 lines = {lines}
                 linesToNextLevel = {10 - (lines % 10)}
                 gameTime = {gameTime}
+                newRecord = {newRecord}
                 />
             
-              
-
               {/* Tablero de juego */}
               <div className="col-8 d-flex justify-content-center">
                 <canvas
@@ -631,7 +625,8 @@ const TetrisGame = () => {
                   }}
                 ></canvas>
               </div>
-
+                
+              {/* Paneles de piezas */}
                 <PiecePanels
                   holdPieceRef={holdPieceRef}
                   nextPieceRef={nextPieceRef}
@@ -644,7 +639,6 @@ const TetrisGame = () => {
               handleStartButton={handleStartButton}
               gameOver={gameOver}
               paused={paused}
-              
             />
             
             {/* Controles táctiles - solo visibles en móvil */}
@@ -656,9 +650,6 @@ const TetrisGame = () => {
               holdPiece={holdPiece}
               setupButtonTouch={setupButtonTouch}
             />
-
-            
-
           </div>
         </div>
       </div>
