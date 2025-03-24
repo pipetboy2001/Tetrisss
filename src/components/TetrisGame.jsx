@@ -489,16 +489,11 @@ const TetrisGame = () => {
           event.preventDefault();
           playerRotate();
           break;
-        case 'p':
-          event.preventDefault();
-          setPaused(!paused);
-          break;
         case ' ':
           event.preventDefault();
           playerDropToBottom();
           break;
         case 'c':
-        case 'C':
           event.preventDefault();
           holdPiece();
           break;
@@ -506,6 +501,8 @@ const TetrisGame = () => {
           break;
       }
     };
+
+    
     
     window.addEventListener('keydown', handleKeyDown);
     
@@ -518,6 +515,24 @@ const TetrisGame = () => {
       cancelAnimationFrame(requestRef.current);
     };
   }, [handleResize, playerMove, playerDrop, playerRotate, playerDropToBottom, holdPiece, update, gameOver, paused]);
+  
+
+  useEffect(() => {
+    const handleKeyPress = (event) => {
+      if (event.key === 'p' || event.key === 'P') {
+        setPaused(prevPaused => !prevPaused);  // Alterna el estado de pausa
+      }
+    };
+  
+    // Agregar el listener para cuando se presiona una tecla
+    window.addEventListener('keydown', handleKeyPress);
+  
+    // Eliminar el listener cuando el componente se desmonte
+    return () => {
+      window.removeEventListener('keydown', handleKeyPress);
+    };
+  }, []);
+
   
   // Iniciar juego
   useEffect(() => {
@@ -575,12 +590,12 @@ const TetrisGame = () => {
 
   return (
     <div
-      className="container-fluidd-flex flex-column justify-content-center align-items-center "
+      className="container-fluidd-flex flex-column justify-content-center align-items-center"
       style={{
         textAlign: "left",
-        backgroundImage:
-          "linear-gradient(to bottom, rgb(5, 50, 123), rgb(64, 80, 95))",
+        backgroundImage: "linear-gradient(to bottom, rgb(5, 50, 123), rgb(64, 80, 95))",
         backgroundRepeat: "no-repeat",
+        borderRadius: "15px", // Bordes redondeados
       }}
     >
 
@@ -598,7 +613,6 @@ const TetrisGame = () => {
       <div className="container">
         <div className="row justify-content-center">
           <div className="col-8">
-
             <div className="row justify-content-center flex-nowrap">
 
               {/* Panel de puntuación */}
@@ -631,9 +645,9 @@ const TetrisGame = () => {
                   holdPieceRef={holdPieceRef}
                   nextPieceRef={nextPieceRef}
                 />
-              
             </div>
               
+
             {/* Controles de juego */}
             <ControlButtons
               handleStartButton={handleStartButton}
